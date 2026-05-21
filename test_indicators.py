@@ -1,6 +1,4 @@
 """
-monitor/quality.py
-===================
 Data quality report generation for the financial ETL pipeline.
 
 In production: push this report to a monitoring dashboard
@@ -15,8 +13,6 @@ from datetime import datetime
 
 def report(df: pd.DataFrame, output_dir: str = "./output") -> pd.DataFrame:
     """
-    Generate a per-ticker data quality and performance summary.
-
     Metrics per ticker:
         - Row count and date range
         - Missing values and outlier count
@@ -58,10 +54,10 @@ def report(df: pd.DataFrame, output_dir: str = "./output") -> pd.DataFrame:
 
     summary = pd.DataFrame(rows)
 
-    # ── Print report ─────────────────────────────────────────────────────────
+    # Print report
     _print_report(summary, df)
 
-    # ── Export ───────────────────────────────────────────────────────────────
+    # Export 
     os.makedirs(output_dir, exist_ok=True)
     report_path = os.path.join(output_dir, "quality_report.csv")
     summary.to_csv(report_path, index=False)
