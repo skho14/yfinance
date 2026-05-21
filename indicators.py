@@ -1,6 +1,4 @@
 """
-load/exporter.py
-=================
 Export enriched financial dataset to Parquet (or CSV fallback).
 
 Design:
@@ -16,8 +14,6 @@ import os
 
 def export(df: pd.DataFrame, config: dict = None) -> str:
     """
-    Export enriched DataFrame to disk.
-
     Args:
         df: Enriched DataFrame from indicators.py
         config: Optional dict with keys:
@@ -35,11 +31,11 @@ def export(df: pd.DataFrame, config: dict = None) -> str:
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # ── Full dataset ─────────────────────────────────────────────────────────
+    # Full dataset
     main_path = _write(df, os.path.join(output_dir, "financial_dataset"), fmt)
     print(f"  [LOAD] Full dataset → {main_path}")
 
-    # ── Per-ticker partitions ────────────────────────────────────────────────
+    # Per-ticker partitions 
     if partition:
         for ticker, group in df.groupby("ticker"):
             path = _write(group, os.path.join(output_dir, ticker), fmt)
