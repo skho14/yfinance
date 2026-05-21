@@ -1,6 +1,4 @@
 """
-extract/fetcher.py
-==================
 Data source abstraction for OHLCV price data.
 
 In production: swap simulate_ohlcv() for yf.download() or an internal API call.
@@ -70,7 +68,7 @@ def simulate_ohlcv(ticker: str, start: str, end: str) -> pd.DataFrame:
     open_  = close * (1 + np.random.randn(n) * 0.005)
     volume = np.random.randint(20_000_000, 80_000_000, n).astype(float)
 
-    # Inject ~1% missing values to simulate real data quality issues
+    # Inject 1% missing values to simulate real data quality issues
     close[np.random.rand(n) < 0.01] = np.nan
 
     return pd.DataFrame({
