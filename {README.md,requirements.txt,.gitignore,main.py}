@@ -1,6 +1,4 @@
 """
-transform/cleaner.py
-=====================
 Data cleaning and validation for raw OHLCV data.
 
 Responsibilities:
@@ -43,19 +41,15 @@ def clean(df: pd.DataFrame, config: dict = None) -> pd.DataFrame:
 
     df = df.copy()
 
-    # ── 1. Schema validation ────────────────────────────────────────────────
     _validate_schema(df)
 
-    # ── 2. Type casting ─────────────────────────────────────────────────────
     df["date"]   = pd.to_datetime(df["date"])
     df["volume"] = pd.to_numeric(df["volume"], errors="coerce").astype("Int64")
     for col in ("open", "high", "low", "close"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # ── 3. Sort ─────────────────────────────────────────────────────────────
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
-    # ── 4. Missing values ───────────────────────────────────────────────────
     n_missing = df["close"].isna().sum()
     if strategy == "ffill":
         df["close"] = df.groupby("ticker")["close"].transform(lambda x: x.ffill())
@@ -68,7 +62,6 @@ def clean(df: pd.DataFrame, config: dict = None) -> pd.DataFrame:
     remaining = df["close"].isna().sum()
     print(f"  [CLEAN] Missing values: {n_missing} → {remaining} ({strategy})")
 
-    # ── 5. Outlier detection ─────────────────────────────────────────────────
     daily_ret = df.groupby("ticker")["close"].pct_change()
     z_scores  = df.groupby("ticker")["close"].transform(
         lambda x: (x.pct_change() - x.pct_change().mean()) / (x.pct_change().std() + 1e-10)
