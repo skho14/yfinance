@@ -1,6 +1,4 @@
 """
-main.py
-========
 Financial ETL Pipeline — entry point.
 
 Usage:
@@ -35,29 +33,29 @@ def run():
 
     t0 = datetime.now()
 
-    # ── EXTRACT ──────────────────────────────────────────────────────────────
+    # EXTRACT 
     raw = fetch(
         tickers=p["tickers"],
         start=p["date_range"]["start"],
         end=p["date_range"]["end"],
     )
 
-    # ── TRANSFORM ────────────────────────────────────────────────────────────
+    # TRANSFORM 
     print("\n[TRANSFORM] Cleaning...")
     cleaned = clean(raw, config=p["quality"])
 
     print("\n[TRANSFORM] Enriching with indicators...")
     enriched = enrich(cleaned, config=p["indicators"])
 
-    # ── LOAD ─────────────────────────────────────────────────────────────────
+    # LOAD
     print("\n[LOAD] Exporting...")
     path = export(enriched, config=p["output"])
 
-    # ── MONITOR ──────────────────────────────────────────────────────────────
+    # MONITOR
     summary = report(enriched, output_dir=p["output"]["dir"])
 
     elapsed = (datetime.now() - t0).total_seconds()
-    print(f"\n✅  Pipeline completed in {elapsed:.2f}s")
+    print(f"\n Pipeline completed in {elapsed:.2f}s")
     print(f"    Rows processed : {len(enriched):,}")
     print(f"    Columns        : {list(enriched.columns)}")
     print(f"    Output         : {p['output']['dir']}/")
