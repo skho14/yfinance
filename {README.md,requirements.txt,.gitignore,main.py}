@@ -1,0 +1,88 @@
+"""
+transform/cleaner.py
+=====================
+Data cleaning and validation for raw OHLCV data.
+
+Responsibilities:
+- Schema validation
+- Type casting
+- Missing value handling
+- Outlier detection and flagging
+"""
+
+import pandas as pd
+import numpy as np
+
+
+REQUIRED_COLUMNS = {"date", "open", "high", "low", "close", "volume", "ticker"}
+
+
+def clean(df: pd.DataFrame, config: dict = None) -> pd.DataFrame:
+    """
+    Clean raw OHLCV data.
+
+    Steps:
+        1. Schema validation
+        2. Type casting
+        3. Sort by ticker + date
+        4. Handle missing values (forward fill)
+        5. Flag outliers (Z-score on daily returns)
+
+    Args:
+        df: Raw OHLCV DataFrame from fetcher
+        config: Optional dict with keys:
+                  missing_value_strategy: "ffill" | "drop" | "interpolate"
+                  outlier_zscore_threshold: float (default 4.0)
+
+    Returns:
+        Cleaned DataFrame with an `is_outlier` boolean column added.
+    """
+    cfg = config or {}
+    strategy  = cfg.get("missing_value_strategy", "ffill")
+    threshold = cfg.get("outlier_zscore_threshold", 4.0)
+
+    df = df.copy()
+
+    # ── 1. Schema validation ────────────────────────────────────────────────
+    _validate_schema(df)
+
+    # ── 2. Type casting ─────────────────────────────────────────────────────
+    df["date"]   = pd.to_datetime(df["date"])
+    df["volume"] = pd.to_numeric(df["volume"], errors="coerce").astype("Int64")
+    for col in ("open", "high", "low", "close"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # ── 3. Sort ─────────────────────────────────────────────────────────────
+    df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
+
+    # ── 4. Missing values ───────────────────────────────────────────────────
+    n_missing = df["close"].isna().sum()
+    if strategy == "ffill":
+        df["close"] = df.groupby("ticker")["close"].transform(lambda x: x.ffill())
+    elif strategy == "drop":
+        df = df.dropna(subset=["close"])
+    elif strategy == "interpolate":
+        df["close"] = df.groupby("ticker")["close"].transform(
+            lambda x: x.interpolate(method="linear")
+        )
+    remaining = df["close"].isna().sum()
+    print(f"  [CLEAN] Missing values: {n_missing} → {remaining} ({strategy})")
+
+    # ── 5. Outlier detection ─────────────────────────────────────────────────
+    daily_ret = df.groupby("ticker")["close"].pct_change()
+    z_scores  = df.groupby("ticker")["close"].transform(
+        lambda x: (x.pct_change() - x.pct_change().mean()) / (x.pct_change().std() + 1e-10)
+    )
+    df["is_outlier"] = z_scores.abs() > threshold
+    n_out = df["is_outlier"].sum()
+    print(f"  [CLEAN] Outliers flagged: {n_out} (Z > {threshold}σ) — kept with flag")
+
+    return df
+
+
+def _validate_schema(df: pd.DataFrame) -> None:
+    """Raise ValueError if required columns are missing."""
+    missing = REQUIRED_COLUMNS - set(df.columns)
+    if missing:
+        raise ValueError(f"Schema validation failed — missing columns: {missing}")
+    print(f"  [CLEAN] Schema validated ✓")
